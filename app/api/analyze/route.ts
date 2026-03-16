@@ -21,22 +21,18 @@ function getOpenAIClient() {
 }
 
 async function extractTextFromPDF(uint8Array: Uint8Array) {
-  const globalScope = globalThis as typeof globalThis & {
-    DOMMatrix?: unknown;
-    ImageData?: unknown;
-    Path2D?: unknown;
-  };
+  const runtimeGlobals = globalThis as Record<string, unknown>;
 
   if (
-    !globalScope.DOMMatrix ||
-    !globalScope.ImageData ||
-    !globalScope.Path2D
+    !runtimeGlobals.DOMMatrix ||
+    !runtimeGlobals.ImageData ||
+    !runtimeGlobals.Path2D
   ) {
     const canvas = await import("@napi-rs/canvas");
 
-    globalScope.DOMMatrix ??= canvas.DOMMatrix;
-    globalScope.ImageData ??= canvas.ImageData;
-    globalScope.Path2D ??= canvas.Path2D;
+    runtimeGlobals.DOMMatrix ??= canvas.DOMMatrix;
+    runtimeGlobals.ImageData ??= canvas.ImageData;
+    runtimeGlobals.Path2D ??= canvas.Path2D;
   }
 
   const { PDFParse } = await import("pdf-parse");
