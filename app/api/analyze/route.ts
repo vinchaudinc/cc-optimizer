@@ -3,6 +3,7 @@ export const runtime = "nodejs";
 import { NextResponse } from "next/server";
 import Papa from "papaparse";
 import OpenAI from "openai";
+import { PDFParse } from "pdf-parse";
 import {
   type AnalysisPeriod,
   buildAnalysisResponse,
@@ -10,55 +11,25 @@ import {
   type Transaction,
 } from "@/app/lib/recommendations";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!,
-});
+function getOpenAIClient() {
+  const apiKey = process.env.OPENAI_API_KEY;
+
+  if (!apiKey) {
+    return null;
+  }
+
+  return new OpenAI({ apiKey });
+}
 
 async function extractTextFromPDF(uint8Array: Uint8Array) {
-  const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
-  const globalScope = globalThis as typeof globalThis & {
-    pdfjsWorker?: { WorkerMessageHandler?: unknown };
-  };
+  const parser = new PDFParse({ data: uint8Array });
 
-  // Next.js server chunks can fail to resolve default workerSrc ("./pdf.worker.mjs").
-  // Preloading the worker module here gives PDF.js a main-thread worker handler.
-  if (!globalScope.pdfjsWorker?.WorkerMessageHandler) {
-    const workerModule = await import("pdfjs-dist/legacy/build/pdf.worker.mjs");
-    globalScope.pdfjsWorker = workerModule;
+  try {
+    const parsed = await parser.getText();
+    return parsed.text;
+  } finally {
+    await parser.destroy();
   }
-
-  const loadingTask = pdfjsLib.getDocument({
-    data: uint8Array,
-    useSystemFonts: true,
-    disableFontFace: true,
-  });
-
-  const pdf = await loadingTask.promise;
-  let fullText = "";
-
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const page = await pdf.getPage(i);
-    const content = await page.getTextContent();
-    const parts: string[] = [];
-
-    for (const item of content.items) {
-      if (typeof item !== "object" || item === null || !("str" in item)) {
-        continue;
-      }
-
-      const text = String((item as { str: unknown }).str);
-      const hasEOL =
-        "hasEOL" in item &&
-        Boolean((item as { hasEOL?: unknown }).hasEOL === true);
-
-      if (text) parts.push(text);
-      parts.push(hasEOL ? "\n" : " ");
-    }
-
-    fullText += parts.join("").replace(/[ \t]+\n/g, "\n") + "\n";
-  }
-
-  return fullText;
 }
 
 function parseJsonArray(text: string): unknown[] {
@@ -152,19 +123,27 @@ function buildTransactionFocusedText(text: string): string {
 }
 
 async function extractTransactionsWithAI(text: string): Promise<Transaction[]> {
+  const openai = getOpenAIClient();
+
+  if (!openai) {
+    console.warn("OPENAI_API_KEY missing. Falling back to heuristic PDF parsing.");
+    return extractTransactionsHeuristic(text);
+  }
+
   const focusedText = buildTransactionFocusedText(text);
 
-  const response = await openai.chat.completions.create({
-    model: "gpt-4.1-mini",
-    temperature: 0,
-    messages: [
-      {
-        role: "system",
-        content: "You extract bank transactions from statements.",
-      },
-      {
-        role: "user",
-        content: `
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4.1-mini",
+      temperature: 0,
+      messages: [
+        {
+          role: "system",
+          content: "You extract bank transactions from statements.",
+        },
+        {
+          role: "user",
+          content: `
 Extract bank transactions from the text below.
 
 Return ONLY JSON.
@@ -187,13 +166,19 @@ Rules:
 TEXT:
 ${focusedText}
 `,
-      },
-    ],
-  });
+        },
+      ],
+    });
 
-  const json = response.choices[0].message.content || "[]";
-  const aiTransactions = normalizeTransactions(parseJsonArray(json));
-  if (aiTransactions.length > 0) return aiTransactions;
+    const json = response.choices[0].message.content || "[]";
+    const aiTransactions = normalizeTransactions(parseJsonArray(json));
+
+    if (aiTransactions.length > 0) {
+      return aiTransactions;
+    }
+  } catch (error) {
+    console.error("OpenAI extraction failed. Falling back to heuristic parsing.", error);
+  }
 
   return extractTransactionsHeuristic(text);
 }
