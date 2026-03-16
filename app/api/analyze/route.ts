@@ -3,7 +3,6 @@ export const runtime = "nodejs";
 import { NextResponse } from "next/server";
 import Papa from "papaparse";
 import OpenAI from "openai";
-import { PDFParse } from "pdf-parse";
 import {
   type AnalysisPeriod,
   buildAnalysisResponse,
@@ -22,6 +21,25 @@ function getOpenAIClient() {
 }
 
 async function extractTextFromPDF(uint8Array: Uint8Array) {
+  const globalScope = globalThis as typeof globalThis & {
+    DOMMatrix?: unknown;
+    ImageData?: unknown;
+    Path2D?: unknown;
+  };
+
+  if (
+    !globalScope.DOMMatrix ||
+    !globalScope.ImageData ||
+    !globalScope.Path2D
+  ) {
+    const canvas = await import("@napi-rs/canvas");
+
+    globalScope.DOMMatrix ??= canvas.DOMMatrix;
+    globalScope.ImageData ??= canvas.ImageData;
+    globalScope.Path2D ??= canvas.Path2D;
+  }
+
+  const { PDFParse } = await import("pdf-parse");
   const parser = new PDFParse({ data: uint8Array });
 
   try {
