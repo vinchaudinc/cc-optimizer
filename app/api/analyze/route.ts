@@ -3,6 +3,7 @@ export const runtime = "nodejs";
 import { NextResponse } from "next/server";
 import Papa from "papaparse";
 import OpenAI from "openai";
+import { extractText, getDocumentProxy } from "unpdf";
 import {
   type AnalysisPeriod,
   buildAnalysisResponse,
@@ -21,29 +22,9 @@ function getOpenAIClient() {
 }
 
 async function extractTextFromPDF(uint8Array: Uint8Array) {
-  const runtimeGlobals = globalThis as Record<string, unknown>;
-
-  if (
-    !runtimeGlobals.DOMMatrix ||
-    !runtimeGlobals.ImageData ||
-    !runtimeGlobals.Path2D
-  ) {
-    const canvas = await import("@napi-rs/canvas");
-
-    runtimeGlobals.DOMMatrix ??= canvas.DOMMatrix;
-    runtimeGlobals.ImageData ??= canvas.ImageData;
-    runtimeGlobals.Path2D ??= canvas.Path2D;
-  }
-
-  const { PDFParse } = await import("pdf-parse");
-  const parser = new PDFParse({ data: uint8Array });
-
-  try {
-    const parsed = await parser.getText();
-    return parsed.text;
-  } finally {
-    await parser.destroy();
-  }
+  const pdf = await getDocumentProxy(uint8Array);
+  const parsed = await extractText(pdf, { mergePages: true });
+  return parsed.text;
 }
 
 function parseJsonArray(text: string): unknown[] {
