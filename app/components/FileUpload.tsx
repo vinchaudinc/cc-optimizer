@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { trackEvent } from "@/app/lib/analytics";
 
 const ANALYSIS_RESULT_STORAGE_KEY = "cc-optimizer-analysis-result";
 
@@ -38,6 +39,7 @@ export default function FileUpload() {
       }
 
       sessionStorage.setItem(ANALYSIS_RESULT_STORAGE_KEY, JSON.stringify(data));
+      trackEvent("StatementUploaded", { period });
       router.push("/results");
     } catch {
       setError("Failed to analyze file");

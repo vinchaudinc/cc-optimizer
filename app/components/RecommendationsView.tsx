@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 
+import { trackEvent } from "@/app/lib/analytics";
 import type { AnalysisResult, Recommendation } from "@/app/lib/analysisTypes";
 
 const CARD_IMAGE_ASSETS: Record<string, string> = {
@@ -276,6 +277,7 @@ function RecommendationCard({
               href={`/api/apply-click?cardId=${encodeURIComponent(card.cardId)}`}
               target="_blank"
               rel="noreferrer"
+              onClick={() => trackEvent("ExternalLinkClicked", { cardId: card.cardId })}
               className="inline-flex items-center rounded-full bg-slate-950 px-5 py-3 text-sm font-medium text-white shadow-[0_12px_30px_rgba(15,23,42,0.22)] transition hover:translate-y-[-1px]"
             >
               Go to card
@@ -460,7 +462,15 @@ export default function RecommendationsView({
         ))}
 
         {additionalRecommendations.length > 0 && (
-          <details className="overflow-hidden rounded-[2rem] border border-white/60 bg-white/75 p-6 shadow-[0_24px_90px_rgba(15,23,42,0.08)] backdrop-blur">
+          <details
+            className="overflow-hidden rounded-[2rem] border border-white/60 bg-white/75 p-6 shadow-[0_24px_90px_rgba(15,23,42,0.08)] backdrop-blur"
+            onToggle={(event) => {
+              const detailsElement = event.currentTarget as HTMLDetailsElement;
+              if (detailsElement.open) {
+                trackEvent("ShowMoreCards");
+              }
+            }}
+          >
             <summary className="cursor-pointer text-sm font-semibold uppercase tracking-[0.24em] text-slate-600">
               Show more cards · ranks 4 to 10
             </summary>
