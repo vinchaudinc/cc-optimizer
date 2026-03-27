@@ -12,7 +12,7 @@ export default function FileUpload() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [period, setPeriod] = useState<"monthlyStatement" | "annualSummary">(
-    "monthlyStatement"
+    "monthlyStatement",
   );
 
   const handleUpload = async () => {

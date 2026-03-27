@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 
 import RecommendationsView from "@/app/components/RecommendationsView";
+import { trackEvent } from "@/app/lib/analytics";
 import type { AnalysisResult } from "@/app/lib/analysisTypes";
 
 const ANALYSIS_RESULT_STORAGE_KEY = "cc-optimizer-analysis-result";
@@ -21,7 +22,18 @@ export default function ResultsPage() {
     }
 
     try {
-      setResult(JSON.parse(stored) as AnalysisResult);
+      const parsed = JSON.parse(stored) as AnalysisResult;
+      setResult(parsed);
+
+      // Track results viewed after upload
+      if (!sessionStorage.getItem("results_viewed_tracked")) {
+        trackEvent("ResultsViewed", {
+          source: "upload",
+          transactionCount: parsed.transactionCount,
+          cardCount: parsed.recommendations.length,
+        });
+        sessionStorage.setItem("results_viewed_tracked", "1");
+      }
     } catch {
       sessionStorage.removeItem(ANALYSIS_RESULT_STORAGE_KEY);
     } finally {

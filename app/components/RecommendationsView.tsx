@@ -209,7 +209,7 @@ function CardArtwork({
           <div className="h-10 w-14 rounded-xl bg-white/75 shadow-inner" />
           <div className="flex items-end justify-between">
             <div className="font-mono text-sm tracking-[0.32em] text-white/85">
-              5128  44••  ••••  9075
+              5128 44•• •••• 9075
             </div>
             <div className="text-right text-xs uppercase tracking-[0.28em] text-white/70">
               Best match
@@ -232,8 +232,12 @@ function ResultMetric({
 }) {
   return (
     <div className="rounded-2xl border border-slate-200/80 bg-white/70 p-4 shadow-sm backdrop-blur">
-      <p className="text-xs uppercase tracking-[0.22em] text-slate-500">{label}</p>
-      <p className={`mt-2 text-2xl font-semibold ${accent ?? "text-slate-950"}`}>
+      <p className="text-xs uppercase tracking-[0.22em] text-slate-500">
+        {label}
+      </p>
+      <p
+        className={`mt-2 text-2xl font-semibold ${accent ?? "text-slate-950"}`}
+      >
         {value}
       </p>
     </div>
@@ -277,7 +281,9 @@ function RecommendationCard({
               href={`/api/apply-click?cardId=${encodeURIComponent(card.cardId)}`}
               target="_blank"
               rel="noreferrer"
-              onClick={() => trackEvent("ExternalLinkClicked", { cardId: card.cardId })}
+              onClick={() =>
+                trackEvent("ExternalLinkClicked", { cardId: card.cardId })
+              }
               className="inline-flex items-center rounded-full bg-slate-950 px-5 py-3 text-sm font-medium text-white shadow-[0_12px_30px_rgba(15,23,42,0.22)] transition hover:translate-y-[-1px]"
             >
               Go to card
@@ -305,12 +311,18 @@ function RecommendationCard({
             <ResultMetric
               label="Expected net monthly value"
               value={`$${card.monthlyNetValue.toFixed(2)}`}
-              accent={card.monthlyNetValue >= 0 ? "text-emerald-700" : "text-rose-700"}
+              accent={
+                card.monthlyNetValue >= 0 ? "text-emerald-700" : "text-rose-700"
+              }
             />
             <ResultMetric
               label="Expected net yearly value"
               value={`$${card.annualizedNetValue.toFixed(2)}`}
-              accent={card.annualizedNetValue >= 0 ? "text-emerald-700" : "text-rose-700"}
+              accent={
+                card.annualizedNetValue >= 0
+                  ? "text-emerald-700"
+                  : "text-rose-700"
+              }
             />
           </div>
 
@@ -357,10 +369,12 @@ function RecommendationCard({
                     Annualized: ${item.annualizedSpend.toFixed(2)}
                   </p>
                   <p className="text-sm text-slate-600">
-                    Effective rate: {formatRateLabel(item.multiplier, card.rewardUnit)}
+                    Effective rate:{" "}
+                    {formatRateLabel(item.multiplier, card.rewardUnit)}
                   </p>
                   <p className="text-sm text-slate-600">
-                    {item.annualizedRewardUnitsEarned.toFixed(0)} {card.rewardUnit}
+                    {item.annualizedRewardUnitsEarned.toFixed(0)}{" "}
+                    {card.rewardUnit}
                   </p>
                   <p className="mt-1 text-sm font-medium text-slate-900">
                     ${item.annualizedValue.toFixed(2)} annual value
